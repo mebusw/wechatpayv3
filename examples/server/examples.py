@@ -12,23 +12,23 @@ from flask import Flask, jsonify, request
 from wechatpayv3 import WeChatPay, WeChatPayType
 
 # 微信支付商户号（直连模式）或服务商商户号（服务商模式，即sp_mchid)
-MCHID = '1234567890'
+MCHID = '1604576299'
 
 # 商户证书私钥
-with open('path_to_key/apiclient_key.pem') as f:
+with open('/Users/jacky/cert/1604576299_20240727_cert/apiclient_key.pem') as f:
     PRIVATE_KEY = f.read()
 
 # 商户证书序列号
-CERT_SERIAL_NO = '444F4864EA9B34415...'
+CERT_SERIAL_NO = '474C5A9EF194677B3D0574537D4C66E79AD3700C'
 
 # API v3密钥， https://pay.weixin.qq.com/wiki/doc/apiv3/wechatpay/wechatpay3_2.shtml
-APIV3_KEY = 'MIIEvwIBADANBgkqhkiG9w0BAQE...'
+APIV3_KEY = '05acea5b9c79QZOocXe8RC6cMYacdefe'
 
 # APPID，应用ID或服务商模式下的sp_appid
-APPID = 'wxd678efh567hg6787'
+APPID = 'wx2f9cc4c2b584eb72'
 
 # 回调地址，也可以在调用接口的时候覆盖
-NOTIFY_URL = 'https://www.xxxx.com/notify'
+NOTIFY_URL = 'https://www.uperform.cn/notify'
 
 # 微信支付平台证书缓存目录，减少证书下载调用次数，首次使用确保此目录为空目录.
 # 初始调试时可不设置，调试通过后再设置，示例值:'./cert'
@@ -198,7 +198,7 @@ def pay_app():
         return jsonify({'code': -1, 'result': {'reason': result.get('code')}})
 
 @app.route('/pay_codepay')
-def pay_app():
+def pay_codeapp():
     # 以付款码支付为例，终端条码枪扫描用户付款码将解码后的auth_code放入payer传递给微信支付服务器扣款。
     out_trade_no = ''.join(sample(ascii_letters + digits, 8))
     description = 'demo-description'
