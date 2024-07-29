@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 ### 常见问题 https://github.com/mebusw/wechatpayv3/blob/master/docs/Q&A.md
-### 调试URL https://libstr.dxsuite.cn:5000/
+### 调试URL https://libstr.dxsuite.cn/wxpayv3
 import json
 import logging
 import os
@@ -32,7 +32,9 @@ APPID = 'wx2f9cc4c2b584eb72'
 APP_SECRET = '0d0850dc8a1a451ae7b38a155b72c85c'
 
 # 回调地址，也可以在调用接口的时候覆盖
-NOTIFY_URL = 'https://libstr.dxsuite.cn/notify'
+URL_PREFIX = '/wxpayv3'
+NOTIFY_URL = 'https://libstr.dxsuite.cn' + URL_PREFIX + '/notify'
+
 
 # 微信支付平台证书缓存目录，减少证书下载调用次数，首次使用确保此目录为空目录.
 # 初始调试时可不设置，调试通过后再设置，示例值:'./cert'
@@ -69,11 +71,19 @@ wxpay = WeChatPay(
 
 app = Flask(__name__)
 
+
 @app.route('/')
 def index():
     return jsonify({'code': 200, 'message': "It works, Flask!"})
 
-@app.route('/pay')
+
+@app.route(URL_PREFIX + '/')
+def home():
+    print(__name__)
+    return jsonify({'code': 200, 'message': "It works, Hommi!"})
+
+
+@app.route(URL_PREFIX + '/pay')
 def pay():
     # 以native下单为例，下单成功后即可获取到'code_url'，将'code_url'转换为二维码，并用微信扫码即可进行支付测试。
     out_trade_no = ''.join(sample(ascii_letters + digits, 8))
@@ -90,7 +100,7 @@ def pay():
     return jsonify({'code': code, 'message': message})
 
 
-@app.route('/pay_jsapi')
+@app.route(URL_PREFIX + '/pay_jsapi')
 def pay_jsapi():
     # 以jsapi下单为例，下单成功后，将prepay_id和其他必须的参数组合传递给JSSDK的wx.chooseWXPay接口唤起支付
     out_trade_no = ''.join(sample(ascii_letters + digits, 8))
@@ -124,7 +134,7 @@ def pay_jsapi():
         return jsonify({'code': -1, 'result': {'reason': result.get('code')}})
 
 
-@app.route('/pay_h5')
+@app.route(URL_PREFIX + '/pay_h5')
 def pay_h5():
     # 以h5下单为例，下单成功后，将获取的的h5_url传递给前端跳转唤起支付。
     out_trade_no = ''.join(sample(ascii_letters + digits, 8))
@@ -141,7 +151,7 @@ def pay_h5():
     return jsonify({'code': code, 'message': message})
 
 
-@app.route('/pay_miniprog', methods=['POST'])
+@app.route(URL_PREFIX + '/pay_miniprog', methods=['POST'])
 def pay_miniprog():
     print('receiving... /pay_miniprog')
     openid = request.json.get('openid')
@@ -181,7 +191,7 @@ def pay_miniprog():
         return jsonify({'code': -1, 'result': {'reason': result.get('code')}})
 
 
-@app.route('/pay_app')
+@app.route(URL_PREFIX + '/pay_app')
 def pay_app():
     # 以app下单为例，下单成功后，将prepay_id和其他必须的参数组合传递给IOS或ANDROID SDK接口唤起支付
     out_trade_no = ''.join(sample(ascii_letters + digits, 8))
@@ -212,7 +222,7 @@ def pay_app():
     else:
         return jsonify({'code': -1, 'result': {'reason': result.get('code')}})
 
-@app.route('/pay_codepay')
+@app.route(URL_PREFIX + '/pay_codepay')
 def pay_codeapp():
     # 以付款码支付为例，终端条码枪扫描用户付款码将解码后的auth_code放入payer传递给微信支付服务器扣款。
     out_trade_no = ''.join(sample(ascii_letters + digits, 8))
@@ -241,7 +251,7 @@ def pay_codeapp():
     else:
         return jsonify({'code': -1, 'result': {'reason': result.get('code')}})
 
-@app.route('/notify', methods=['POST'])
+@app.route(URL_PREFIX + '/notify', methods=['POST'])
 def notify():
     print('received nofify')
     ###由于 django 框架特殊性，会将 headers 做一定的预处理，可以参考以下方式调用。
@@ -270,13 +280,13 @@ def notify():
         payer = resp.get('payer')
         amount = resp.get('amount').get('total')
         # TODO: 根据返回参数进行必要的业务处理，处理完后返回200或204
-        print('notified out_trade_no: %s', out_trade_no)
+        print('notified out_trade_no: ', out_trade_no)
         ## 实际开发中处理微信支付通知消息时有两个问题需要注意。一是可能会重复收到同一个通知消息，需要在代码中进行判断处理。另一个是处理消息的时间如果过长，建议考虑异步处理，先缓存消息，避免微信支付服务器端认为超时，如果持续超时，微信支付服务器端可能会认为回调消息接口不可用。
         return jsonify({'code': 'SUCCESS', 'message': '成功'})
     else:
         return jsonify({'code': 'FAILED', 'message': '失败'}), 500
 
-@app.route('/wxLogin', methods=['POST'])
+@app.route(URL_PREFIX + '/wxLogin', methods=['POST'])
 def wxLogin():
     code = request.json.get('code')
     try:
