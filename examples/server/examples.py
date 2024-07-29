@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 ### 常见问题 https://github.com/mebusw/wechatpayv3/blob/master/docs/Q&A.md
-### 调试URL http://127.0.0.1:5000/
+### 调试URL https://libstr.dxsuite.cn:5000/
 import json
 import logging
 import os
@@ -8,6 +8,7 @@ from random import sample
 from string import ascii_letters, digits
 import time
 import uuid
+import requests
 
 from flask import Flask, jsonify, request
 
@@ -17,7 +18,7 @@ from wechatpayv3 import WeChatPay, WeChatPayType
 MCHID = '1604576299'
 
 # 商户证书私钥
-with open('/Users/jacky/cert/1604576299_20240727_cert/apiclient_key.pem') as f:
+with open('/var/apps/wxpay-backend/1604576299_20240727_cert/apiclient_key.pem') as f:
     PRIVATE_KEY = f.read()
 
 # 商户证书序列号
@@ -31,7 +32,7 @@ APPID = 'wx2f9cc4c2b584eb72'
 APP_SECRET = '0d0850dc8a1a451ae7b38a155b72c85c'
 
 # 回调地址，也可以在调用接口的时候覆盖
-NOTIFY_URL = 'https://www.uperform.cn/notify'
+NOTIFY_URL = 'https://libstr.dxsuite.cn/notify'
 
 # 微信支付平台证书缓存目录，减少证书下载调用次数，首次使用确保此目录为空目录.
 # 初始调试时可不设置，调试通过后再设置，示例值:'./cert'
@@ -78,6 +79,8 @@ def pay():
     out_trade_no = ''.join(sample(ascii_letters + digits, 8))
     description = 'demo-description'
     amount = 1
+
+    print('pay as NATIVE with out_trade_no: %s', out_trade_no)
     code, message = wxpay.pay(
         description=description,
         out_trade_no=out_trade_no,
@@ -138,21 +141,25 @@ def pay_h5():
     return jsonify({'code': code, 'message': message})
 
 
-@app.route('/pay_miniprog')
+@app.route('/pay_miniprog', methods=['POST'])
 def pay_miniprog():
+    print('receiving... /pay_miniprog')
     openid = request.json.get('openid')
     description = request.json.get('description')
-    print(openid)
+
     # 以小程序下单为例，下单成功后，将prepay_id和其他必须的参数组合传递给小程序的wx.requestPayment接口唤起支付
     out_trade_no = ''.join(sample(ascii_letters + digits, 8))
     amount = 1   ### 总金额，单位为分
-    payer = {'openid': openid}
+
+    print('/pay_miniprog:  ', openid, description, out_trade_no, amount)
+
+    print('pay as MINIPROG with out_trade_no: %s', out_trade_no)
     code, message = wxpay.pay(
         description=description,
         out_trade_no=out_trade_no,
         amount={'total': amount},
         pay_type=WeChatPayType.MINIPROG,
-        payer=payer
+        payer={'openid': openid}
     )
     result = json.loads(message)
     if code in range(200, 300):
@@ -236,7 +243,7 @@ def pay_codeapp():
 
 @app.route('/notify', methods=['POST'])
 def notify():
-
+    print('received nofify')
     ###由于 django 框架特殊性，会将 headers 做一定的预处理，可以参考以下方式调用。
     # headers = {
     # 'Wechatpay-Signature': request.META.get('HTTP_WECHATPAY_SIGNATURE'),
@@ -263,7 +270,7 @@ def notify():
         payer = resp.get('payer')
         amount = resp.get('amount').get('total')
         # TODO: 根据返回参数进行必要的业务处理，处理完后返回200或204
-
+        print('notified out_trade_no: %s', out_trade_no)
         ## 实际开发中处理微信支付通知消息时有两个问题需要注意。一是可能会重复收到同一个通知消息，需要在代码中进行判断处理。另一个是处理消息的时间如果过长，建议考虑异步处理，先缓存消息，避免微信支付服务器端认为超时，如果持续超时，微信支付服务器端可能会认为回调消息接口不可用。
         return jsonify({'code': 'SUCCESS', 'message': '成功'})
     else:
