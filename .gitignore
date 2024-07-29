@@ -1,2 +1,8 @@
+# .gitignore
 demo.log
 .DS_Store
+.env
+
+1604576299_20240727_cert/
+.p12
+.pem

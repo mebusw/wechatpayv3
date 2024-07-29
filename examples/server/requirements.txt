@@ -2,3 +2,4 @@ Flask
 requests>=2.21.0
 cryptography>=35.0.0
 wechatpayv3
+python-dotenv

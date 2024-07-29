@@ -4,6 +4,7 @@
 import json
 import logging
 import os
+from dotenv import load_dotenv
 from random import sample
 from string import ascii_letters, digits
 import time
@@ -14,26 +15,32 @@ from flask import Flask, jsonify, request
 
 from wechatpayv3 import WeChatPay, WeChatPayType
 
+load_dotenv()
+
 # 微信支付商户号（直连模式）或服务商商户号（服务商模式，即sp_mchid)
-MCHID = '1604576299'
+MCHID = os.getenv('MCHID')
 
 # 商户证书私钥
-with open('/var/apps/wxpay-backend/1604576299_20240727_cert/apiclient_key.pem') as f:
+current_dir = os.path.dirname(__file__)
+APICLIENT_KEY_FILE_PATH = os.getenv('APICLIENT_KEY_FILE_PATH')
+private_key_file_path = os.path.join(current_dir, APICLIENT_KEY_FILE_PATH)
+with open(private_key_file_path) as f:
     PRIVATE_KEY = f.read()
 
 # 商户证书序列号
-CERT_SERIAL_NO = '474C5A9EF194677B3D0574537D4C66E79AD3700C'
+CERT_SERIAL_NO = os.getenv('CERT_SERIAL_NO')
 
 # API v3密钥， https://pay.weixin.qq.com/wiki/doc/apiv3/wechatpay/wechatpay3_2.shtml
-APIV3_KEY = '05acea5b9c79QZOocXe8RC6cMYacdefe'
+APIV3_KEY = os.getenv('APIV3_KEY')
 
 # APPID，应用ID或服务商模式下的sp_appid
-APPID = 'wx2f9cc4c2b584eb72'
-APP_SECRET = '0d0850dc8a1a451ae7b38a155b72c85c'
+APPID = os.getenv('APPID')
+APP_SECRET = os.getenv('APP_SECRET')
 
 # 回调地址，也可以在调用接口的时候覆盖
-URL_PREFIX = '/wxpayv3'
-NOTIFY_URL = 'https://libstr.dxsuite.cn' + URL_PREFIX + '/notify'
+DOMAIN_NAME = os.getenv('DOMAIN_NAME')
+URL_PREFIX = os.getenv('URL_PREFIX')
+NOTIFY_URL = DOMAIN_NAME + URL_PREFIX + '/notify'
 
 
 # 微信支付平台证书缓存目录，减少证书下载调用次数，首次使用确保此目录为空目录.
