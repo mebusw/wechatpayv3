@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+### 常见问题 https://github.com/mebusw/wechatpayv3/blob/master/docs/Q&A.md
+### 调试URL http://127.0.0.1:5000/
 import json
 import logging
 import os
@@ -26,6 +28,7 @@ APIV3_KEY = '05acea5b9c79QZOocXe8RC6cMYacdefe'
 
 # APPID，应用ID或服务商模式下的sp_appid
 APPID = 'wx2f9cc4c2b584eb72'
+APP_SECRET = '0d0850dc8a1a451ae7b38a155b72c85c'
 
 # 回调地址，也可以在调用接口的时候覆盖
 NOTIFY_URL = 'https://www.uperform.cn/notify'
@@ -65,6 +68,9 @@ wxpay = WeChatPay(
 
 app = Flask(__name__)
 
+@app.route('/')
+def index():
+    return jsonify({'code': 200, 'message': "It works, Flask!"})
 
 @app.route('/pay')
 def pay():
@@ -134,11 +140,13 @@ def pay_h5():
 
 @app.route('/pay_miniprog')
 def pay_miniprog():
+    openid = request.json.get('openid')
+    description = request.json.get('description')
+    print(openid)
     # 以小程序下单为例，下单成功后，将prepay_id和其他必须的参数组合传递给小程序的wx.requestPayment接口唤起支付
     out_trade_no = ''.join(sample(ascii_letters + digits, 8))
-    description = 'demo-description'
-    amount = 1
-    payer = {'openid': 'demo-openid'}
+    amount = 1   ### 总金额，单位为分
+    payer = {'openid': openid}
     code, message = wxpay.pay(
         description=description,
         out_trade_no=out_trade_no,
@@ -228,6 +236,17 @@ def pay_codeapp():
 
 @app.route('/notify', methods=['POST'])
 def notify():
+
+    ###由于 django 框架特殊性，会将 headers 做一定的预处理，可以参考以下方式调用。
+    # headers = {
+    # 'Wechatpay-Signature': request.META.get('HTTP_WECHATPAY_SIGNATURE'),
+    # 'Wechatpay-Timestamp': request.META.get('HTTP_WECHATPAY_TIMESTAMP'),
+    # 'Wechatpay-Nonce': request.META.get('HTTP_WECHATPAY_NONCE'),
+    # 'Wechatpay-Serial': request.META.get('HTTP_WECHATPAY_SERIAL')
+    # }
+    # result = wxpay.callback(headers=headers, body=request.body)
+    ###
+
     result = wxpay.callback(request.headers, request.data)
     if result and result.get('event_type') == 'TRANSACTION.SUCCESS':
         resp = result.get('resource')
@@ -244,10 +263,34 @@ def notify():
         payer = resp.get('payer')
         amount = resp.get('amount').get('total')
         # TODO: 根据返回参数进行必要的业务处理，处理完后返回200或204
+
+        ## 实际开发中处理微信支付通知消息时有两个问题需要注意。一是可能会重复收到同一个通知消息，需要在代码中进行判断处理。另一个是处理消息的时间如果过长，建议考虑异步处理，先缓存消息，避免微信支付服务器端认为超时，如果持续超时，微信支付服务器端可能会认为回调消息接口不可用。
         return jsonify({'code': 'SUCCESS', 'message': '成功'})
     else:
         return jsonify({'code': 'FAILED', 'message': '失败'}), 500
 
+@app.route('/wxLogin', methods=['POST'])
+def wxLogin():
+    code = request.json.get('code')
+    try:
+        openid, session_key = get_openid_and_session_key(code)
+        return jsonify({'openid': openid, 'session_key': session_key})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+def get_openid_and_session_key(code):
+    url = f'https://api.weixin.qq.com/sns/jscode2session?appid={APPID}&secret={APP_SECRET}&js_code={code}&grant_type=authorization_code'
+
+    response = requests.get(url)
+    data = response.json()
+
+    if 'openid' in data:
+        openid = data['openid']
+        session_key = data['session_key']
+        return openid, session_key
+    else:
+        raise Exception(f"Error fetching openid: {data.get('errmsg')}")
+
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
