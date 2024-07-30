@@ -93,6 +93,13 @@ def home():
 @app.route(URL_PREFIX + '/pay')
 def pay():
     # 以native下单为例，下单成功后即可获取到'code_url'，将'code_url'转换为二维码，并用微信扫码即可进行支付测试。
+    # import qrcode
+    # # 生成二维码
+    # img = qrcode.make(data="你好")
+    # # 将二维码保存为图片
+    # with open('test.png', 'wb') as f:
+    #     img.save(f)
+
     out_trade_no = ''.join(sample(ascii_letters + digits, 8))
     description = 'demo-description'
     amount = 1
@@ -317,4 +324,5 @@ def get_openid_and_session_key(code):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    isDebug = os.getenv('DEBUG').lower() in ['true', '1', 't', 'y', 'yes']
+    app.run(debug=isDebug)
